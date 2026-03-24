@@ -150,7 +150,7 @@ app.UseAuthorization();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
-    Authorization = new[] { new Crm.Infrastructure.Security.HangfireAuthorizationFilter() }
+    Authorization = new[] { new Crm.Api.Security.HangfireAuthorizationFilter() }
 });
 
 // Schedule Recurring Jobs

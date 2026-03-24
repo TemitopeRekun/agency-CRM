@@ -1,7 +1,7 @@
 using Hangfire.Dashboard;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Crm.Infrastructure.Security;
+namespace Crm.Api.Security;
 
 public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
 {
