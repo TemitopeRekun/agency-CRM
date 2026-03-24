@@ -36,6 +36,10 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
     {
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
+        // Ensure database is created and migrated before tests
+        await context.Database.MigrateAsync();
+
         var connection = context.Database.GetDbConnection();
         await connection.OpenAsync();
 
