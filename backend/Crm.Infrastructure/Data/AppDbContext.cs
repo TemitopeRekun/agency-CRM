@@ -75,7 +75,9 @@ public class AppDbContext : DbContext
 
     private void ApplyTenantFilter<T>(ModelBuilder modelBuilder) where T : class, ITenantedEntity
     {
-        modelBuilder.Entity<T>().HasQueryFilter(e => !_userContext.IsAuthenticated || e.TenantId == _userContext.TenantId!.Value);
+        modelBuilder.Entity<T>().HasQueryFilter(e => 
+            !_userContext.IsAuthenticated || 
+            (_userContext.TenantId.HasValue && e.TenantId == _userContext.TenantId.Value));
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

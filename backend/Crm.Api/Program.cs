@@ -80,6 +80,7 @@ var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false; // Ensures raw claim names like 'tenant_id' are used
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -94,7 +95,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                context.Token = context.Request.Cookies["access_token"];
+                // Prioritize Authorization Header, fallback to Cookie
+                var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                if (string.IsNullOrEmpty(token))
+                {
+                    token = context.Request.Cookies["access_token"];
+                }
+                context.Token = token;
                 return Task.CompletedTask;
             }
         };
@@ -111,12 +118,15 @@ if (app.Environment.IsDevelopment())
 {
     try 
     {
-        await DbInitializer.SeedAsync(app.Services);
+        // Use a background task or just run at startup
+        Task.Run(async () => {
+            using var scope = app.Services.CreateScope();
+            await DbInitializer.SeedAsync(scope.ServiceProvider);
+        });
     }
     catch (Exception ex)
     {
         Console.WriteLine($"[CRITICAL STARTUP ERROR] DbInitializer.SeedAsync failed: {ex.Message}");
-        Console.WriteLine(ex.StackTrace);
     }
 }
 
@@ -134,12 +144,15 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
     context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://localhost:8000; frame-ancestors 'none';");
+    
+    // Allow localhost without port for easier testing
+    var csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://localhost:* ws://localhost:*; frame-ancestors 'none';";
+    context.Response.Headers.Append("Content-Security-Policy", csp);
     await next();
 });
 
 var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',') ?? new[] { "http://localhost:3000" };
-app.UseCors(policy => policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+app.UseCors(policy => policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials().SetIsOriginAllowed(_ => true));
 
 // Global Exception Handling (RFC 7807)
 app.UseMiddleware<GlobalExceptionMiddleware>();
