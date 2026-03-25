@@ -25,6 +25,8 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
     private readonly HttpClient _client;
     private readonly WebApplicationFactory<Program> _factory;
     private Respawner? _respawner;
+    private static bool _dbInitialized = false;
+    private static readonly object _dbLock = new();
 
     public IntegrationTests(WebApplicationFactory<Program> factory)
     {
@@ -37,8 +39,15 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         
-        // Ensure database is created and migrated before tests
-        await context.Database.MigrateAsync();
+        // Ensure database is created and migrated before tests (only once per run)
+        lock (_dbLock)
+        {
+            if (!_dbInitialized)
+            {
+                context.Database.Migrate();
+                _dbInitialized = true;
+            }
+        }
 
         var connection = context.Database.GetDbConnection();
         await connection.OpenAsync();
@@ -47,7 +56,24 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         {
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = new[] { "public" },
-            TablesToIgnore = new Table[] { "Tenants", "Users" }
+            // Ignore Tenants and Users (seeded) AND Hangfire internal tables
+            TablesToIgnore = new Table[] 
+            { 
+                "Tenants", 
+                "Users",
+                "__EFMigrationsHistory",
+                new Table("public", "Job"),
+                new Table("public", "JobParameter"),
+                new Table("public", "JobQueue"),
+                new Table("public", "List"),
+                new Table("public", "Schema"),
+                new Table("public", "Server"),
+                new Table("public", "Set"),
+                new Table("public", "State"),
+                new Table("public", "Counter"),
+                new Table("public", "Hash"),
+                new Table("public", "AggregatedCounter")
+            }
         });
 
         await _respawner.ResetAsync(connection);

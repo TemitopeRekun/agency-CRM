@@ -43,7 +43,7 @@ jobs:
       run: dotnet build backend/AgencyCrm.sln --no-restore
 
     - name: Run Backend Tests
-      run: dotnet test backend/AgencyCrm.sln --no-build --verbosity normal
+      run: dotnet test backend/AgencyCrm.sln --no-build --verbosity normal --logger "console;verbosity=detailed"
       env:
         ConnectionStrings__Default: Host=localhost;Database=agency_crm;Username=postgres;Password=postgres
         Jwt__Key: ci_test_secret_key_long_enough_for_validation_32_chars!

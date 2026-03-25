@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db-ci:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agency_crm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend-test:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    working_dir: /source
+    volumes:
+      - ./backend:/source
+    environment:
+      - ConnectionStrings__Default=Host=db-ci;Database=agency_crm;Username=postgres;Password=postgres
+      - Jwt__Key=ci_test_secret_key_long_enough_for_validation_32_chars!
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      db-ci:
+        condition: service_healthy
+    command: >
+      sh -c "dotnet test AgencyCrm.sln --verbosity normal --logger 'console;verbosity=detailed'"
+
+  web-test:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://backend-test:8000
+    command: >
+      sh -c "npm ci && npm run lint && npm run build && npx vitest run"

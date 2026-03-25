@@ -109,4 +109,44 @@ public class OfferServiceTests
         
         _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
+
+    [Fact]
+    public async Task UpdateStatusAsync_NonExistentOffer_ReturnsNull()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((Offer?)null);
+
+        // Act
+        var result = await _service.UpdateStatusAsync(id, new UpdateOfferStatusRequest { Status = OfferStatus.Accepted });
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_ToAccepted_ReusesExistingClientIfLeadConverted()
+    {
+        // Arrange
+        var clientId = Guid.NewGuid();
+        var leadId = Guid.NewGuid();
+        var lead = new Lead { Id = leadId, Title = "Existing Client Lead", ConvertedClientId = clientId };
+        var id = Guid.NewGuid();
+        var offer = new Offer { Id = id, Title = "Follow-up Offer", Status = OfferStatus.Draft, LeadId = leadId };
+        
+        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(offer);
+        _leadRepositoryMock.Setup(r => r.GetByIdAsync(leadId)).ReturnsAsync(lead);
+
+        var request = new UpdateOfferStatusRequest { Status = OfferStatus.Accepted };
+
+        // Act
+        await _service.UpdateStatusAsync(id, request);
+
+        // Assert
+        // Verify Client was NOT created again
+        _clientRepositoryMock.Verify(c => c.AddAsync(It.IsAny<Client>()), Times.Never);
+        
+        // Verify Project was created with EXISTING ClientId
+        _projectRepositoryMock.Verify(p => p.AddAsync(It.Is<Project>(pr => pr.ClientId == clientId)), Times.Once);
+    }
 }
