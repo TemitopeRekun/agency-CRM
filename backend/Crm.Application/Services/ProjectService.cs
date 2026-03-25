@@ -33,7 +33,8 @@ public class ProjectService
             Id = Guid.NewGuid(),
             Name = request.Name,
             Description = request.Description,
-            ClientId = request.ClientId
+            ClientId = request.ClientId,
+            OfferId = request.OfferId
         };
 
         await _repository.AddAsync(project);

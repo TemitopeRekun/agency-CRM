@@ -174,7 +174,15 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         var clientResp = await _client.PostAsJsonAsync("/api/clients", new { Name = "Invoice Test Client" });
         var client = await clientResp.Content.ReadFromJsonAsync<ClientResponse>();
 
-        var projectReq = new { Name = "Invoice Project", ClientId = client!.Id };
+        var leadReq = new { Title = "Invoice Lead", ClientId = client!.Id };
+        var leadResp = await _client.PostAsJsonAsync("/api/leads", leadReq);
+        var lead = await leadResp.Content.ReadFromJsonAsync<LeadResponse>();
+
+        var offerReq = new { Title = "Invoice Offer", TotalAmount = 1000, LeadId = lead!.Id };
+        var offerResp = await _client.PostAsJsonAsync("/api/offers", offerReq);
+        var offer = await offerResp.Content.ReadFromJsonAsync<OfferResponse>();
+
+        var projectReq = new { Name = "Invoice Project", ClientId = client!.Id, OfferId = offer!.Id };
         var projectResp = await _client.PostAsJsonAsync("/api/projects", projectReq);
         var project = await projectResp.Content.ReadFromJsonAsync<ProjectResponse>();
 
@@ -213,7 +221,15 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         var clientResp = await _client.PostAsJsonAsync("/api/clients", new { Name = "Metrics Client" });
         var client = await clientResp.Content.ReadFromJsonAsync<ClientResponse>();
 
-        var projectReq = new { Name = "Metrics Project", ClientId = client!.Id };
+        var leadReq = new { Title = "Metrics Lead", ClientId = client!.Id };
+        var leadResp = await _client.PostAsJsonAsync("/api/leads", leadReq);
+        var lead = await leadResp.Content.ReadFromJsonAsync<LeadResponse>();
+
+        var offerReq = new { Title = "Metrics Offer", TotalAmount = 500, LeadId = lead!.Id };
+        var offerResp = await _client.PostAsJsonAsync("/api/offers", offerReq);
+        var offer = await offerResp.Content.ReadFromJsonAsync<OfferResponse>();
+
+        var projectReq = new { Name = "Metrics Project", ClientId = client!.Id, OfferId = offer!.Id };
         var projectResp = await _client.PostAsJsonAsync("/api/projects", projectReq);
         var project = await projectResp.Content.ReadFromJsonAsync<ProjectResponse>();
 
