@@ -168,3 +168,5 @@ The project uses **GitHub Actions** for continuous integration.
   - Runs Frontend unit tests using Vitest.
 - **Triggers**: Runs on every push to `main` and all Pull Requests.
 
+
+<!-- Trigger Railway Redeploy: 2026-03-26 T15:40 -->
