@@ -1,0 +1,15 @@
+# netlify.toml (at the root of the repo)
+
+[build]
+  # Tell Netlify where the app source is
+  base = "web"
+  
+  # The build command to run inside the /web folder
+  command = "npm run build"
+  
+  # Where Next.js puts the static files relative to the base directory
+  publish = ".next"
+
+[[plugins]]
+  # This plugin is required for Next.js features like SSR and Rewrites to work on Netlify
+  package = "@netlify/plugin-nextjs"
