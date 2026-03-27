@@ -139,20 +139,17 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed Database
-if (app.Environment.IsDevelopment())
+// Seed Database (Always runs if database is empty, even in Production)
+try 
 {
-    try 
+    using (var scope = app.Services.CreateScope())
     {
-        using (var scope = app.Services.CreateScope())
-        {
-            await DbInitializer.SeedAsync(scope.ServiceProvider);
-        }
+        await DbInitializer.SeedAsync(scope.ServiceProvider);
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[CRITICAL STARTUP ERROR] DbInitializer.SeedAsync failed: {ex.Message}");
-    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "[CRITICAL STARTUP ERROR] DbInitializer.SeedAsync failed: {Message}", ex.Message);
 }
 
 // Migrate Database on Startup
@@ -243,18 +240,26 @@ app.MapGet("/ping", () => Results.Ok(new { status = "healthy", message = "pong",
 app.MapGet("/api/health/db", async (AppDbContext db) => {
     try {
         var canConnect = await db.Database.CanConnectAsync();
-        if (canConnect) {
-            return Results.Ok(new { 
-                status = "healthy", 
-                database = "connected",
-                environment = isUsingRailway ? "Railway" : "Local"
-            });
-        }
-        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+        var appliedMigrations = await db.Database.GetAppliedMigrationsAsync();
+        
+        // Also check if critical tables exist
+        var hasTenants = false;
+        try { hasTenants = await db.Tenants.AnyAsync(); } catch { }
+
+        return Results.Ok(new { 
+            status = "healthy", 
+            database = canConnect ? "connected" : "disconnected",
+            environment = isUsingRailway ? "Railway" : "Local",
+            appliedMigrations = appliedMigrations,
+            pendingMigrations = pendingMigrations,
+            hasTenantsTable = hasTenants,
+            timestamp = DateTime.UtcNow
+        });
     }
     catch (Exception ex) {
         return Results.Problem(
-            title: "Database Connection Failed",
+            title: "Database Health Check Failed",
             detail: ex.Message,
             statusCode: 500
         );
