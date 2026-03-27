@@ -1,3 +1,5 @@
+using System;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -199,8 +201,8 @@ app.Use(async (context, next) =>
     await next();
 });
 
-var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',') ?? new[] { "http://localhost:3000" };
-app.UseCors(policy => policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials().SetIsOriginAllowed(_ => true));
+// Use the "DefaultPolicy" configured above
+app.UseCors("DefaultPolicy");
 
 // Global Exception Handling (RFC 7807)
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -248,7 +250,7 @@ app.MapGet("/api/health/db", async (AppDbContext db) => {
                 environment = isUsingRailway ? "Railway" : "Local"
             });
         }
-        return Results.StatusCodes.Status503ServiceUnavailable;
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
     }
     catch (Exception ex) {
         return Results.Problem(
