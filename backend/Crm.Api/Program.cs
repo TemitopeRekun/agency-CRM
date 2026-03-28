@@ -14,6 +14,7 @@ using Serilog;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.HttpOverrides;
+using Crm.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -282,7 +283,7 @@ app.Run();
 
 public partial class Program 
 { 
-    private static string ParseDatabaseUrl(string url)
+    private static string? ParseDatabaseUrl(string? url)
     {
         if (string.IsNullOrEmpty(url)) return null;
         if (!url.StartsWith("postgres://") && !url.StartsWith("postgresql://")) return url;
