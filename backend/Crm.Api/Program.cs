@@ -15,8 +15,6 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.HttpOverrides;
 
-namespace Crm.Api;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Resolve Connection String
