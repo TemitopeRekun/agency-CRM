@@ -21,6 +21,8 @@ public class Invoice : BaseEntity, ITenantedEntity
     public Contract? Contract { get; set; }
     public Guid ProjectId { get; set; }
     public Project? Project { get; set; }
+    public Guid ClientId { get; set; }
+    public Client? Client { get; set; }
     public Guid TenantId { get; set; }
     
     public ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();

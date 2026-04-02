@@ -22,7 +22,8 @@ export const NewOfferModal = ({ isOpen, onClose }: NewOfferModalProps) => {
     title: '',
     leadId: '',
     totalAmount: '',
-    notes: ''
+    notes: '',
+    quoteTemplateId: 'template-standard'
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -47,10 +48,11 @@ export const NewOfferModal = ({ isOpen, onClose }: NewOfferModalProps) => {
         title: formData.title,
         leadId: formData.leadId,
         totalAmount: Number(formData.totalAmount),
-        notes: formData.notes
+        notes: formData.notes,
+        quoteTemplateId: formData.quoteTemplateId
       });
       toast.success('Offer created successfully');
-      setFormData({ title: '', leadId: '', totalAmount: '', notes: '' });
+      setFormData({ title: '', leadId: '', totalAmount: '', notes: '', quoteTemplateId: 'template-standard' });
       onClose();
     } catch (err) {
       console.error(err);
@@ -88,6 +90,17 @@ export const NewOfferModal = ({ isOpen, onClose }: NewOfferModalProps) => {
           value={formData.leadId}
           onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
           error={errors.leadId}
+        />
+
+        <Select
+          label="Quote Template"
+          options={[
+            { label: 'Standard Digital Marketing', value: 'template-standard' },
+            { label: 'Premium Web Dev', value: 'template-premium' },
+            { label: 'Custom', value: 'template-custom' }
+          ]}
+          value={formData.quoteTemplateId}
+          onChange={(e) => setFormData({ ...formData, quoteTemplateId: e.target.value })}
         />
 
         <Input

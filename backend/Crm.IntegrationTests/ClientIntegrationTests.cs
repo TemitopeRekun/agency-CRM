@@ -38,16 +38,18 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         
-        // Ensure database is created and migrated before tests (only once per run)
+        // Ensure database is created and migrated once per process
         lock (_dbLock)
         {
             if (!_dbInitialized)
             {
                 context.Database.Migrate();
-                DbInitializer.SeedAsync(_factory.Services).Wait();
                 _dbInitialized = true;
             }
         }
+
+        // Always Seed CRM Data before each test (DbInitializer handles idempotency)
+        await DbInitializer.SeedAsync(_factory.Services);
 
         var connection = context.Database.GetDbConnection();
         await connection.OpenAsync();
@@ -139,6 +141,14 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, I
         var invoice = await invoiceResp.Content.ReadFromJsonAsync<InvoiceResponse>();
         Assert.Equal("INV-2024-001", invoice!.InvoiceNumber);
         Assert.Equal(5000, invoice.TotalAmount);
+
+        // 5. Verify Engagement Tracking (ViewedAt)
+        var viewResp = await _client.PostAsync($"/api/portal/contracts/{contract.Token}/view", null);
+        await CheckSuccessAsync(viewResp);
+
+        var contractAfterView = await _client.GetFromJsonAsync<ContractResponse>($"/api/contracts/offer/{offer.Id}");
+        Assert.True(contractAfterView!.HasBeenViewed);
+        Assert.NotNull(contractAfterView.ViewedAt);
     }
 
     [Fact]

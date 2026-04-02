@@ -9,12 +9,26 @@ export enum ContractStatus {
   Cancelled
 }
 
+export enum SuccessFeeType {
+  None,
+  FixedPerLead,
+  RevenueShare
+}
+
 export interface Contract {
   id: string;
   title: string;
   totalAmount: number;
   status: ContractStatus;
   projectId: string;
+  version: number;
+  signatureStatus: string;
+  isWaitingSignature: boolean;
+  signedAt?: string;
+  baseRetainer: number;
+  successFeeType: SuccessFeeType;
+  successFeeValue: number;
+  lastInvoicedAt?: string;
   createdAt: string;
 }
 
@@ -42,6 +56,14 @@ export const useContracts = () => {
     },
   });
 
+  const signContractMutation = useMutation({
+    mutationFn: ({ id, digitalSignature }: { id: string; digitalSignature: string }) =>
+      api.post<Contract>(`/api/contracts/${id}/sign`, { digitalSignature }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+
   return {
     contracts: contractsQuery.data ?? [],
     isLoading: contractsQuery.isLoading,
@@ -50,5 +72,7 @@ export const useContracts = () => {
     isCreating: createContractMutation.isPending,
     generateContract: generateContractMutation.mutateAsync,
     isGenerating: generateContractMutation.isPending,
+    signContract: signContractMutation.mutateAsync,
+    isSigning: signContractMutation.isPending,
   };
 };

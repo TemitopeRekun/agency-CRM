@@ -20,6 +20,20 @@ export interface AdMetric {
   createdAt: string;
 }
 
+export interface AdMetricAnalytics {
+  projectId: string;
+  totalSpend: number;
+  totalImpressions: number;
+  totalClicks: number;
+  totalConversions: number;
+  costPerLead: number;
+  conversionRate: number;
+  ctr: number;
+  roas: number;
+  projectROI: number;
+  rawMetrics: AdMetric[];
+}
+
 export const useAdMetrics = (projectId?: string) => {
   const queryClient = useQueryClient();
 
@@ -28,6 +42,13 @@ export const useAdMetrics = (projectId?: string) => {
     queryFn: () => projectId 
       ? api.get<AdMetric[]>(`/api/admetrics/project/${projectId}`) 
       : api.get<AdMetric[]>('/api/admetrics'),
+  });
+
+  const analyticsQuery = useQuery({
+    queryKey: ['adMetrics', 'analytics', projectId],
+    queryFn: () => projectId 
+      ? api.get<AdMetricAnalytics>(`/api/admetrics/project/${projectId}/analytics`)
+      : api.get<AdMetricAnalytics>('/api/admetrics/analytics'),
   });
 
   const createMetricMutation = useMutation({
@@ -41,6 +62,8 @@ export const useAdMetrics = (projectId?: string) => {
   return {
     metrics: metricsQuery.data ?? [],
     isLoading: metricsQuery.isLoading,
+    analytics: analyticsQuery.data,
+    isAnalyticsLoading: analyticsQuery.isLoading,
     createMetric: createMetricMutation.mutateAsync,
     isCreating: createMetricMutation.isPending,
   };

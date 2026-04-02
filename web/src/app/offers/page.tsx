@@ -60,10 +60,24 @@ export default function OffersPage() {
             onDragStart={(e) => handleDragStart(e, offer.id)}
             className={`bg-background border rounded-lg p-4 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow relative ${isUpdatingStatus ? 'opacity-50 pointer-events-none' : ''}`}
           >
+            {offer.quoteTemplateId && (
+              <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full inline-block mb-2 capitalize">
+                {offer.quoteTemplateId.replace('template-', '')}
+              </span>
+            )}
             <h4 className="font-medium mb-1">{offer.title}</h4>
             <div className="text-xl font-bold text-emerald-600 mb-3">
                ${offer.totalAmount?.toLocaleString() || '0'}
             </div>
+            {offer.hasBeenViewed ? (
+              <div className="text-xs text-blue-600 font-medium mb-2 flex items-center gap-1">
+                 <span className="w-2 h-2 rounded-full bg-blue-600"></span> Client Viewed
+              </div>
+            ) : (
+                <div className="text-xs text-amber-600 font-medium mb-2 flex items-center gap-1">
+                 <span className="w-2 h-2 rounded-full bg-amber-600"></span> Not Viewed
+              </div>
+            )}
             {offer.notes && <p className="text-xs text-muted-foreground line-clamp-2">{offer.notes}</p>}
           </div>
         ))}

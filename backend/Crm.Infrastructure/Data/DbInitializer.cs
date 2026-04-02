@@ -13,6 +13,14 @@ public static class DbInitializer
 
         await context.Database.MigrateAsync();
 
+        await SeedTenantsAsync(context);
+        await SeedCrmDataAsync(context);
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedTenantsAsync(AppDbContext context)
+    {
         if (await context.Tenants.AnyAsync()) return;
 
         // Tenant A
@@ -45,8 +53,14 @@ public static class DbInitializer
 
         await context.Tenants.AddRangeAsync(tenantA, tenantB);
         await context.Users.AddRangeAsync(adminA, adminB);
+    }
 
-        // Seed CRM Data for Tenant A
+    private static async Task SeedCrmDataAsync(AppDbContext context)
+    {
+        if (await context.Clients.AnyAsync()) return;
+
+        var tenantAId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var tenantBId = Guid.Parse("00000000-0000-0000-0000-000000000002");
         var clientA1 = new Client { Id = Guid.NewGuid(), Name = "Tech Solutions Ltd", TenantId = tenantAId };
         var leadA1 = new Lead { Id = Guid.NewGuid(), Title = "Website Redesign", Description = "Tenant A Lead", TenantId = tenantAId };
         await context.Clients.AddAsync(clientA1);

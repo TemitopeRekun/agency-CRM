@@ -4,6 +4,7 @@ import { useStats } from '@/hooks/queries/useStats';
 import { useInvoices, InvoiceStatus } from '@/hooks/queries/useInvoices';
 import { useAdMetrics } from '@/hooks/queries/useAdMetrics';
 import { Card, CardContent, CardHeader, CardTitle, Container, Section } from '@/components/ui/LayoutPrimitives';
+import { ROIAnalytics } from './components/ROIAnalytics';
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useStats();
@@ -63,6 +64,10 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
+      </Section>
+
+      <Section title="ROI & Performance Intelligence" className="mt-8">
+         <ROIAnalytics />
       </Section>
 
       <Section title="Recent Activity" className="mt-8">

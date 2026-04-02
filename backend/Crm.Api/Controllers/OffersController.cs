@@ -43,4 +43,13 @@ public class OffersController : ControllerBase
         if (response == null) return NotFound();
         return Ok(response);
     }
+
+    [HttpPost("{id}/view")]
+    public async Task<ActionResult<OfferResponse>> MarkAsViewed(Guid id)
+    {
+        _logger.LogInformation("Marking offer as viewed: {Id}", id);
+        var response = await _offerService.MarkAsViewedAsync(id);
+        if (response == null) return NotFound();
+        return Ok(response);
+    }
 }

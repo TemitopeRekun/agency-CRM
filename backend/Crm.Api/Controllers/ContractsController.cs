@@ -37,4 +37,18 @@ public class ContractsController : ControllerBase
         var response = await _contractService.GenerateFromProjectAsync(projectId);
         return Ok(response);
     }
+
+    [HttpPost("{id}/sign")]
+    public async Task<ActionResult<ContractResponse>> SignContract(Guid id, [FromBody] SignContractRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.DigitalSignature))
+        {
+            return BadRequest("A digital signature is required.");
+        }
+
+        var response = await _contractService.SignContractAsync(id, request.DigitalSignature);
+        if (response == null) return NotFound();
+
+        return Ok(response);
+    }
 }

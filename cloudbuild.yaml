@@ -1,4 +1,25 @@
 steps:
+  # 0. Quality Gates: Lint & Test
+  - name: 'node:20-alpine'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'web'
+  - name: 'node:20-alpine'
+    entrypoint: 'npm'
+    args: ['run', 'lint']
+    dir: 'web'
+    
+  - name: 'mcr.microsoft.com/dotnet/sdk:8.0'
+    entrypoint: 'dotnet'
+    args: ['build', 'AgencyCrm.sln', '-c', 'Release']
+    dir: 'backend'
+  # Note: Integration tests are skipped in Cloud Build by default as they require a Postgres instance. 
+  # We focus on Unit tests here.
+  - name: 'mcr.microsoft.com/dotnet/sdk:8.0'
+    entrypoint: 'dotnet'
+    args: ['test', 'Crm.UnitTests/Crm.UnitTests.csproj', '-c', 'Release']
+    dir: 'backend'
+
   # 1. Build & Push Backend
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/crm-api', './backend']

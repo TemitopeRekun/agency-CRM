@@ -9,11 +9,12 @@
 ## High-Level Modules
 1. **Auth & Tenants:** Identity management and multi-tenant context (`tenant_id`).
 2. **CRM:** Client, Contact, and Lead management.
-3. **Offers / Deals:** Sales pipelines, deal stages, and quote generation.
-4. **Projects & Tasks:** Post-approval workflow, task tracking, and resource management.
-5. **Contracts:** Template-based contract generation, versioning, and e-signatures (Phase 2).
-6. **Invoicing:** Single-currency invoicing from projects/contracts.
-7. **Ads Metrics:** Google/Meta/TikTok metrics integration (stubs for MVP).
+3. **Offers / Deals:** Sales pipelines, multi-channel deal stages, and template-based quote generation.
+4. **Projects & Tasks:** Post-approval workflow, task tracking, resource management, and time tracking.
+5. **Contracts:** Template-based contract generation, document versioning, and internal electronic signatures.
+6. **Invoicing:** Multi-currency, success-fee, and time-based invoicing.
+7. **Ads Metrics:** Native API integrations for Google, Meta, and TikTok to fetch performance metrics and calculate ROI.
+8. **Automation Engine:** Rule-based background jobs and webhooks for data ingestion.
 
 ## Data Flow
 1. **Frontend:** React Server Components for data fetching; Client Components for interactivity.

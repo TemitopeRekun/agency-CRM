@@ -8,6 +8,7 @@ public class CreateOfferRequest
     public decimal TotalAmount { get; set; }
     public Guid LeadId { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public string? QuoteTemplateId { get; set; }
 }
 
 public class UpdateOfferStatusRequest
@@ -23,5 +24,8 @@ public class OfferResponse
     public OfferStatus Status { get; set; }
     public string Notes { get; set; } = string.Empty;
     public Guid LeadId { get; set; }
+    public string? QuoteTemplateId { get; set; }
+    public DateTimeOffset? QuoteOpenedAt { get; set; }
+    public bool HasBeenViewed { get; set; }
     public DateTime CreatedAt { get; set; }
 }

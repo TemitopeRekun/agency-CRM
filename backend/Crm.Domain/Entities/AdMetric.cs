@@ -15,6 +15,9 @@ public class AdMetric : BaseEntity, ITenantedEntity
     public Guid ProjectId { get; set; }
     public Project? Project { get; set; }
     
+    public Guid? AdAccountId { get; set; }
+    public ProjectAdAccount? AdAccount { get; set; }
+    
     public AdPlatform Platform { get; set; }
     public decimal Spend { get; set; }
     public long Impressions { get; set; }

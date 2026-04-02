@@ -23,6 +23,7 @@ public class ProjectService
             Id = p.Id,
             Name = p.Name,
             Description = p.Description,
+            Status = p.Status,
             ClientId = p.ClientId,
             CreatedAt = p.CreatedAt
         });
@@ -48,6 +49,7 @@ public class ProjectService
             Id = project.Id,
             Name = project.Name,
             Description = project.Description,
+            Status = project.Status,
             ClientId = project.ClientId,
             CreatedAt = project.CreatedAt
         };

@@ -15,6 +15,9 @@ export interface Offer {
   status: OfferStatus;
   notes: string;
   leadId: string;
+  quoteTemplateId?: string;
+  quoteOpenedAt?: string;
+  hasBeenViewed?: boolean;
   createdAt: string;
 }
 
@@ -42,6 +45,13 @@ export const useOffers = () => {
     },
   });
 
+  const markAsViewedMutation = useMutation({
+    mutationFn: (id: string) => api.post<Offer>(`/api/offers/${id}/view`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
+
   return {
     offers: offersQuery.data ?? [],
     isLoading: offersQuery.isLoading,
@@ -50,5 +60,7 @@ export const useOffers = () => {
     isCreating: createOfferMutation.isPending,
     updateStatus: updateStatusMutation.mutateAsync,
     isUpdatingStatus: updateStatusMutation.isPending,
+    markAsViewed: markAsViewedMutation.mutateAsync,
+    isMarkingAsViewed: markAsViewedMutation.isPending,
   };
 };

@@ -10,15 +10,18 @@ public class InvoiceService
     private readonly IGenericRepository<Invoice> _repository;
     private readonly IGenericRepository<Contract> _contractRepository;
     private readonly IGenericRepository<Project> _projectRepository;
+    private readonly IAdMetricService _adMetricService;
 
     public InvoiceService(
         IGenericRepository<Invoice> repository,
         IGenericRepository<Contract> contractRepository,
-        IGenericRepository<Project> projectRepository)
+        IGenericRepository<Project> projectRepository,
+        IAdMetricService adMetricService)
     {
         _repository = repository;
         _contractRepository = contractRepository;
         _projectRepository = projectRepository;
+        _adMetricService = adMetricService;
     }
 
     public async Task<IEnumerable<InvoiceResponse>> GetAllAsync()
@@ -59,28 +62,95 @@ public class InvoiceService
         var contract = await _contractRepository.GetByIdAsync(contractId)
             ?? throw new KeyNotFoundException("Contract not found");
 
+        var startDate = contract.LastInvoicedAt?.DateTime ?? contract.CreatedAt;
+        var endDate = DateTime.UtcNow;
+
+        var items = new List<InvoiceItem>();
+
+        // 1. Base Retainer
+        if (contract.BaseRetainer > 0)
+        {
+            items.Add(new InvoiceItem
+            {
+                Id = Guid.NewGuid(),
+                Description = $"Monthly Management Retainer: {contract.Title}",
+                Quantity = 1,
+                UnitPrice = contract.BaseRetainer
+            });
+        }
+
+        // 2. Success Fee Calculation
+        if (contract.SuccessFeeType != SuccessFeeType.None && contract.SuccessFeeValue > 0)
+        {
+            var analytics = await _adMetricService.GetProjectAnalyticsAsync(contract.ProjectId);
+            
+            if (contract.SuccessFeeType == SuccessFeeType.FixedPerLead)
+            {
+                var totalLeads = analytics.TotalConversions;
+                if (totalLeads > 0)
+                {
+                    items.Add(new InvoiceItem
+                    {
+                        Id = Guid.NewGuid(),
+                        Description = $"Success Bonus: {totalLeads} Leads @ ${contract.SuccessFeeValue}/lead",
+                        Quantity = (decimal)totalLeads,
+                        UnitPrice = contract.SuccessFeeValue
+                    });
+                }
+            }
+            else if (contract.SuccessFeeType == SuccessFeeType.RevenueShare)
+            {
+                // Calculate previous month's spend
+                var now = DateTime.UtcNow;
+                var firstOfCurrentMonth = new DateTime(now.Year, now.Month, 1);
+                var endOfLastMonth = firstOfCurrentMonth.AddDays(-1);
+                var firstOfLastMonth = new DateTime(endOfLastMonth.Year, endOfLastMonth.Month, 1);
+
+                var monthlySpend = await _adMetricService.GetSpendByRangeAsync(contract.ProjectId, firstOfLastMonth, endOfLastMonth);
+                
+                var bonus = monthlySpend * (contract.SuccessFeeValue / 100); 
+                if (bonus > 0)
+                {
+                    items.Add(new InvoiceItem
+                    {
+                        Id = Guid.NewGuid(),
+                        Description = $"Performance Bonus: {contract.SuccessFeeValue}% of {firstOfLastMonth:MMMM yyyy} Ad Spend (${monthlySpend:N2})",
+                        Quantity = 1,
+                        UnitPrice = bonus
+                    });
+                }
+            }
+        }
+
+        // Standard line if no billing terms are defined
+        if (items.Count == 0)
+        {
+            items.Add(new InvoiceItem
+            {
+                Id = Guid.NewGuid(),
+                Description = $"Services as per contract: {contract.Title}",
+                Quantity = 1,
+                UnitPrice = contract.TotalAmount
+            });
+        }
+
+        var totalAmount = items.Sum(i => i.Quantity * i.UnitPrice);
+
         var invoice = new Invoice
         {
             Id = Guid.NewGuid(),
             InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{contract.Title.Substring(0, Math.Min(3, contract.Title.Length)).ToUpper()}",
-            TotalAmount = contract.TotalAmount,
+            TotalAmount = totalAmount,
             Currency = "USD",
             DueDate = DateTime.UtcNow.AddDays(30),
             ContractId = contractId,
             ProjectId = contract.ProjectId,
             Status = InvoiceStatus.Draft,
-            Items = new List<InvoiceItem>
-            {
-                new InvoiceItem
-                {
-                    Id = Guid.NewGuid(),
-                    Description = $"Services as per contract: {contract.Title}",
-                    Quantity = 1,
-                    UnitPrice = contract.TotalAmount
-                }
-            }
+            Items = items
         };
 
+        contract.LastInvoicedAt = DateTimeOffset.UtcNow;
+        await _contractRepository.UpdateAsync(contract);
         await _repository.AddAsync(invoice);
         await _repository.SaveChangesAsync();
 

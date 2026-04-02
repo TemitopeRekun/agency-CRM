@@ -10,6 +10,7 @@ using Crm.Application.Services;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Crm.Infrastructure.BackgroundJobs;
+using Crm.Infrastructure.Services;
 using Serilog;
 using System.Diagnostics;
 using System.Linq;
@@ -80,13 +81,27 @@ builder.Services.AddScoped<OfferService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<ContractService>();
+builder.Services.AddScoped<IContractPortalService, ContractPortalService>();
 builder.Services.AddScoped<InvoiceService>();
-builder.Services.AddScoped<TimeEntryService>();
-builder.Services.AddScoped<AdMetricService>();
+builder.Services.AddScoped<TimeTrackingService>();
+builder.Services.AddScoped<IAutomationService, AutomationService>();
+builder.Services.AddScoped<IAdMetricService, AdMetricService>();
+
+// Ad Platforms
+builder.Services.AddHttpClient<GoogleAdsClient>();
+builder.Services.AddHttpClient<MetaAdsClient>();
+builder.Services.AddScoped<IAdPlatformClient>(sp => sp.GetRequiredService<GoogleAdsClient>());
+builder.Services.AddScoped<IAdPlatformClient>(sp => sp.GetRequiredService<MetaAdsClient>());
+
+// Notifications
+builder.Services.AddHttpClient<ISlackService, SlackService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ISlackService, SlackService>();
 
 // Background Jobs
 builder.Services.AddScoped<AdMetricsSyncJob>();
 builder.Services.AddScoped<RemindersJob>();
+builder.Services.AddScoped<AutomationJobs>();
 
 // Hangfire
 if (!string.IsNullOrEmpty(connectionString))
@@ -234,6 +249,16 @@ if (!string.IsNullOrEmpty(connectionString))
             "daily-reminders",
             job => job.ExecuteAsync(),
             config["RemindersInterval"] ?? Cron.Daily());
+
+        recurringJobManager.AddOrUpdate<AutomationJobs>(
+            "overdue-invoice-check",
+            job => job.CheckOverdueInvoicesJob(),
+            config["OverdueInvoiceCheckInterval"] ?? Cron.Daily());
+
+        recurringJobManager.AddOrUpdate<AutomationJobs>(
+            "monthly-billing",
+            job => job.MonthlyBillingJob(),
+            config["MonthlyBillingInterval"] ?? Cron.Monthly(1));
     }
 }
 

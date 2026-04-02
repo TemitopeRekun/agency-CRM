@@ -25,7 +25,10 @@ public class AppDbContext : DbContext
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<AdMetric> AdMetrics => Set<AdMetric>();
+    public DbSet<ProjectAdAccount> ProjectAdAccounts => Set<ProjectAdAccount>();
+    public DbSet<TaskTemplate> TaskTemplates => Set<TaskTemplate>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
 
@@ -71,6 +74,50 @@ public class AppDbContext : DbContext
             .HasForeignKey(rt => rt.UserId)
             .IsRequired(true)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Time Tracking & Team Relationships
+        modelBuilder.Entity<ProjectMember>()
+            .HasOne(pm => pm.Project)
+            .WithMany(p => p.Members)
+            .HasForeignKey(pm => pm.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProjectMember>()
+            .HasOne(pm => pm.User)
+            .WithMany(u => u.ProjectMemberships)
+            .HasForeignKey(pm => pm.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TimeEntry>()
+            .HasOne(te => te.Project)
+            .WithMany(p => p.TimeEntries)
+            .HasForeignKey(te => te.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TimeEntry>()
+            .HasOne(te => te.Task)
+            .WithMany(t => t.TimeEntries)
+            .HasForeignKey(te => te.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TimeEntry>()
+            .HasOne(te => te.User)
+            .WithMany(u => u.TimeEntries)
+            .HasForeignKey(te => te.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Ad Account Relationships
+        modelBuilder.Entity<ProjectAdAccount>()
+            .HasOne(pa => pa.Project)
+            .WithMany(p => p.AdAccounts)
+            .HasForeignKey(pa => pa.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AdMetric>()
+            .HasOne(am => am.AdAccount)
+            .WithMany(pa => pa.Metrics)
+            .HasForeignKey(am => am.AdAccountId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     private void ApplyTenantFilter<T>(ModelBuilder modelBuilder) where T : class, ITenantedEntity

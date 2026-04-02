@@ -21,6 +21,10 @@ public class TaskService
             Id = t.Id,
             Title = t.Title,
             Description = t.Description,
+            Status = t.Status,
+            Priority = t.Priority,
+            StartDate = t.StartDate,
+            DueDate = t.DueDate,
             ProjectId = t.ProjectId,
             CreatedAt = t.CreatedAt
         }).ToList();
@@ -33,7 +37,9 @@ public class TaskService
             Id = Guid.NewGuid(),
             Title = request.Title,
             Description = request.Description,
-            ProjectId = request.ProjectId ?? Guid.Empty
+            ProjectId = request.ProjectId ?? Guid.Empty,
+            StartDate = request.StartDate ?? DateTime.UtcNow,
+            DueDate = request.DueDate
         };
 
         await _repository.AddAsync(task);
@@ -44,6 +50,10 @@ public class TaskService
             Id = task.Id,
             Title = task.Title,
             Description = task.Description,
+            Status = task.Status,
+            Priority = task.Priority,
+            StartDate = task.StartDate,
+            DueDate = task.DueDate,
             ProjectId = task.ProjectId,
             CreatedAt = task.CreatedAt
         };

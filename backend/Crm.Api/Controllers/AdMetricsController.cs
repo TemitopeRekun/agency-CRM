@@ -1,4 +1,5 @@
 using Crm.Application.DTOs.AdMetrics;
+using Crm.Application.Interfaces;
 using Crm.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +11,9 @@ namespace Crm.Api.Controllers;
 [Route("api/[controller]")]
 public class AdMetricsController : ControllerBase
 {
-    private readonly AdMetricService _adMetricService;
+    private readonly IAdMetricService _adMetricService;
 
-    public AdMetricsController(AdMetricService adMetricService)
+    public AdMetricsController(IAdMetricService adMetricService)
     {
         _adMetricService = adMetricService;
     }
@@ -37,5 +38,19 @@ public class AdMetricsController : ControllerBase
     {
         var response = await _adMetricService.CreateAsync(request);
         return Ok(response);
+    }
+
+    [HttpGet("project/{projectId}/analytics")]
+    public async Task<ActionResult<AdMetricAnalyticsResponse>> GetProjectAnalytics(Guid projectId)
+    {
+        var analytics = await _adMetricService.GetProjectAnalyticsAsync(projectId);
+        return Ok(analytics);
+    }
+
+    [HttpGet("analytics")]
+    public async Task<ActionResult<AdMetricAnalyticsResponse>> GetGlobalAnalytics()
+    {
+        var analytics = await _adMetricService.GetGlobalAnalyticsAsync();
+        return Ok(analytics);
     }
 }

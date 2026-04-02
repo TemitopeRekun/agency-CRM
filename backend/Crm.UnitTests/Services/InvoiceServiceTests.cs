@@ -12,6 +12,7 @@ public class InvoiceServiceTests
     private readonly Mock<IGenericRepository<Invoice>> _repositoryMock;
     private readonly Mock<IGenericRepository<Contract>> _contractRepositoryMock;
     private readonly Mock<IGenericRepository<Project>> _projectRepositoryMock;
+    private readonly Mock<IAdMetricService> _adMetricServiceMock;
     private readonly InvoiceService _service;
 
     public InvoiceServiceTests()
@@ -19,10 +20,12 @@ public class InvoiceServiceTests
         _repositoryMock = new Mock<IGenericRepository<Invoice>>();
         _contractRepositoryMock = new Mock<IGenericRepository<Contract>>();
         _projectRepositoryMock = new Mock<IGenericRepository<Project>>();
+        _adMetricServiceMock = new Mock<IAdMetricService>();
         _service = new InvoiceService(
             _repositoryMock.Object,
             _contractRepositoryMock.Object,
-            _projectRepositoryMock.Object);
+            _projectRepositoryMock.Object,
+            _adMetricServiceMock.Object);
     }
 
     [Fact]

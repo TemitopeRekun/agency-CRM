@@ -8,6 +8,9 @@ public class User : BaseEntity, ITenantedEntity
     public UserRole Role { get; set; }
     public Guid TenantId { get; set; }
     public Tenant? Tenant { get; set; }
+    public decimal HourlyRate { get; set; }
     public List<RefreshToken> RefreshTokens { get; set; } = new();
+    public ICollection<TimeEntry> TimeEntries { get; set; } = new List<TimeEntry>();
+    public ICollection<ProjectMember> ProjectMemberships { get; set; } = new List<ProjectMember>();
 }
 

@@ -13,6 +13,8 @@ export default function Navbar() {
           <Link href="/tasks" className="hover:text-emerald-400 transition">Tasks</Link>
           <Link href="/contracts" className="hover:text-pink-400 transition">Contracts</Link>
           <Link href="/invoices" className="hover:text-rose-400 transition">Invoices</Link>
+          <Link href="/analytics" className="hover:text-rose-400 transition">Analytics</Link>
+          <Link href="/integrations" className="hover:text-cyan-400 font-bold transition">Integrations</Link>
           <Link href="/login" className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition">Logout</Link>
         </div>
       </div>
