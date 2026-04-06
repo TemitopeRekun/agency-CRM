@@ -6,6 +6,7 @@ export interface Project {
   name: string;
   description: string;
   clientId?: string;
+  status: string;
   createdAt: string;
 }
 

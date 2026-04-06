@@ -37,7 +37,10 @@ public class ContractResponse
     public SuccessFeeType SuccessFeeType { get; set; }
     public decimal SuccessFeeValue { get; set; }
     public DateTimeOffset? LastInvoicedAt { get; set; }
+    public bool HasBeenViewed { get; set; }
+    public DateTimeOffset? ViewedAt { get; set; }
 
+    public Guid Token { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

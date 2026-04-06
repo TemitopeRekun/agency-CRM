@@ -8,20 +8,20 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
-        using var scope = serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var context = serviceProvider.GetRequiredService<AppDbContext>();
 
-        await context.Database.MigrateAsync();
+        await context.Database.EnsureCreatedAsync();
 
         await SeedTenantsAsync(context);
-        await SeedCrmDataAsync(context);
+        await context.SaveChangesAsync();
 
+        await SeedCrmDataAsync(context);
         await context.SaveChangesAsync();
     }
 
     private static async Task SeedTenantsAsync(AppDbContext context)
     {
-        if (await context.Tenants.AnyAsync()) return;
+        if (await context.Tenants.IgnoreQueryFilters().AnyAsync()) return;
 
         // Tenant A
         var tenantAId = Guid.Parse("00000000-0000-0000-0000-000000000001");
@@ -57,7 +57,7 @@ public static class DbInitializer
 
     private static async Task SeedCrmDataAsync(AppDbContext context)
     {
-        if (await context.Clients.AnyAsync()) return;
+        if (await context.Clients.IgnoreQueryFilters().AnyAsync()) return;
 
         var tenantAId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var tenantBId = Guid.Parse("00000000-0000-0000-0000-000000000002");

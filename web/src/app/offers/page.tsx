@@ -70,15 +70,31 @@ export default function OffersPage() {
                ${offer.totalAmount?.toLocaleString() || '0'}
             </div>
             {offer.hasBeenViewed ? (
-              <div className="text-xs text-blue-600 font-medium mb-2 flex items-center gap-1">
-                 <span className="w-2 h-2 rounded-full bg-blue-600"></span> Client Viewed
+              <div className="text-[10px] text-blue-600 font-medium mb-2 flex items-center gap-1">
+                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Client Viewed
               </div>
             ) : (
-                <div className="text-xs text-amber-600 font-medium mb-2 flex items-center gap-1">
-                 <span className="w-2 h-2 rounded-full bg-amber-600"></span> Not Viewed
+                <div className="text-[10px] text-amber-600 font-medium mb-2 flex items-center gap-1">
+                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Not Viewed
               </div>
             )}
-            {offer.notes && <p className="text-xs text-muted-foreground line-clamp-2">{offer.notes}</p>}
+            
+            {offer.items && offer.items.length > 0 && (
+                <div className="mt-2 pt-2 border-t space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Breakdown</p>
+                    {offer.items.slice(0, 2).map((item, i) => (
+                        <div key={i} className="flex justify-between text-[10px]">
+                            <span className="truncate max-w-[120px]">{item.title}</span>
+                            <span className="font-medium">${item.amount.toLocaleString()}</span>
+                        </div>
+                    ))}
+                    {offer.items.length > 2 && (
+                        <p className="text-[9px] text-muted-foreground text-center italic">+{offer.items.length - 2} more items</p>
+                    )}
+                </div>
+            )}
+
+            {offer.notes && <p className="text-[10px] text-muted-foreground line-clamp-1 mt-2">{offer.notes}</p>}
           </div>
         ))}
         {columnOffers.length === 0 && (

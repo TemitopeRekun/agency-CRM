@@ -13,12 +13,12 @@ using System.Net.Http.Headers;
 
 namespace Crm.IntegrationTests;
 
-public class TenantIsolationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public class TenantIsolationTests : IClassFixture<CrmWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CrmWebApplicationFactory _factory;
 
-    public TenantIsolationTests(WebApplicationFactory<Program> factory)
+    public TenantIsolationTests(CrmWebApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();

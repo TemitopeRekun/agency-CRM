@@ -1,6 +1,7 @@
 using Crm.Application.DTOs.AdMetrics;
 using Crm.Application.Interfaces;
 using Crm.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
 namespace Crm.Application.Services;
@@ -44,7 +45,9 @@ public class AdMetricService : IAdMetricService
 
     public async Task<AdMetricAnalyticsResponse> GetProjectAnalyticsAsync(Guid projectId)
     {
-        var metrics = (await _repository.GetAllAsync()).Where(m => m.ProjectId == projectId).ToList();
+        var metrics = await _repository.AsQueryable()
+            .Where(m => m.ProjectId == projectId)
+            .ToListAsync();
         var contracts = await _contractRepository.GetAllAsync();
         var projectContracts = contracts.Where(c => c.ProjectId == projectId && c.Status == ContractStatus.Signed).ToList();
 
@@ -135,8 +138,9 @@ public class AdMetricService : IAdMetricService
 
     public async Task<decimal> GetSpendByRangeAsync(Guid projectId, DateTime start, DateTime end)
     {
-        var metrics = (await _repository.GetAllAsync())
-            .Where(m => m.ProjectId == projectId && m.Date >= start && m.Date <= end);
+        var metrics = await _repository.AsQueryable()
+            .Where(m => m.ProjectId == projectId && m.Date >= start && m.Date <= end)
+            .ToListAsync();
         
         return metrics.Sum(m => m.Spend);
     }

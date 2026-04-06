@@ -61,6 +61,21 @@ public class InvoicesController : ControllerBase
         if (response == null) return NotFound();
         return Ok(response);
     }
+
+    [HttpPost("{id}/payments")]
+    public async Task<ActionResult<InvoiceResponse>> RecordPayment(Guid id, [FromBody] RecordPaymentRequest request)
+    {
+        var response = await _invoiceService.RecordPaymentAsync(id, request);
+        if (response == null) return NotFound();
+        return Ok(response);
+    }
+
+    [HttpPost("trigger-automated-billing")]
+    public async Task<ActionResult<int>> TriggerBilling()
+    {
+        var count = await _invoiceService.ProcessPendingBillingAsync();
+        return Ok(count);
+    }
 }
 
 public class UpdateInvoiceStatusRequest

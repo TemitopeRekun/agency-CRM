@@ -33,12 +33,14 @@ public class MetaAdsClient : IAdPlatformClient
         
         var dateString = date.ToString("yyyy-MM-dd");
         var url = $"https://graph.facebook.com/v19.0/{externalAccountId}/insights" +
-                  $"?fields=spend,impressions,clicks,conversions&time_range={{'since':'{dateString}','until':'{dateString}'}}" +
-                  $"&access_token={accessToken}";
+                  $"?fields=spend,impressions,clicks,conversions&time_range={{'since':'{dateString}','until':'{dateString}'}}";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
         try 
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.SendAsync(request);
                 
             if (!response.IsSuccessStatusCode)
             {

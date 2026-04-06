@@ -12,6 +12,7 @@ using Hangfire.PostgreSql;
 using Crm.Infrastructure.BackgroundJobs;
 using Crm.Infrastructure.Services;
 using Serilog;
+using Hangfire.MemoryStorage;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -19,25 +20,29 @@ using Crm.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Resolve Connection String
+// Resolve Connection String & Provider
 var rawDatabaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 var isUsingRailway = !string.IsNullOrEmpty(rawDatabaseUrl);
-var connectionString = isUsingRailway 
-    ? ParseDatabaseUrl(rawDatabaseUrl) 
-    : builder.Configuration.GetConnectionString("Default");
+
+// If no production URL is found, we assume we're in 'Local First' mode unless explicitly told otherwise.
+bool useSqlite = !isUsingRailway || builder.Configuration["Database:Provider"] == "Sqlite";
+
+var connectionString = "";
+
+if (useSqlite)
+{
+    connectionString = "Data Source=crm_local.db";
+    Log.Information("🚀 Using Local SQLite (zero-config). Database: {ConnectionString}", connectionString);
+}
+else
+{
+    connectionString = ParseDatabaseUrl(rawDatabaseUrl!); 
+    Log.Information("🌍 Using PostgreSQL provider (Railway).");
+}
 
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
     ?? builder.Configuration["CORS:AllowedOrigins"])?.Split(',') 
     ?? new[] { "http://localhost:3000" };
-
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("Connection string 'Default' not found or DATABASE_URL environment variable is missing.");
-}
-
-Log.Information(isUsingRailway 
-    ? "Using Railway DATABASE_URL for database connection." 
-    : "Using local appsettings configuration for database connection.");
 
 // Serilog Configuration
 Log.Logger = new LoggerConfiguration()
@@ -65,9 +70,20 @@ builder.Services.AddCors(options =>
     });
 });
 
-// EF Core + Postgres
+// EF Core Configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    if (useSqlite)
+    {
+        options.UseSqlite(connectionString);
+    }
+    else
+    {
+        options.UseNpgsql(connectionString);
+    }
+});
+
+builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 
 // Security & Context
 builder.Services.AddHttpContextAccessor();
@@ -82,7 +98,7 @@ builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<ContractService>();
 builder.Services.AddScoped<IContractPortalService, ContractPortalService>();
-builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<TimeTrackingService>();
 builder.Services.AddScoped<IAutomationService, AutomationService>();
 builder.Services.AddScoped<IAdMetricService, AdMetricService>();
@@ -103,17 +119,24 @@ builder.Services.AddScoped<AdMetricsSyncJob>();
 builder.Services.AddScoped<RemindersJob>();
 builder.Services.AddScoped<AutomationJobs>();
 
-// Hangfire
-if (!string.IsNullOrEmpty(connectionString))
+// Hangfire Configuration
+builder.Services.AddHangfire(config =>
 {
-    builder.Services.AddHangfire(config => config
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+          .UseSimpleAssemblyNameTypeSerializer()
+          .UseRecommendedSerializerSettings();
 
-    builder.Services.AddHangfireServer();
-}
+    if (useSqlite)
+    {
+        config.UseMemoryStorage();
+    }
+    else
+    {
+        config.UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString));
+    }
+});
+
+builder.Services.AddHangfireServer();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -129,7 +152,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key is missing.")))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key is missing."))),
+            NameClaimType = "sub",
+            RoleClaimType = "role"
         };
         options.Events = new JwtBearerEvents
         {
@@ -178,11 +203,17 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (db.Database.GetPendingMigrations().Any())
+        
+        if (useSqlite)
         {
-            Log.Information("Applying pending migrations...");
+            db.Database.EnsureCreated();
+            Log.Information("SQLite Database migrated successfully.");
+        }
+        else if (db.Database.GetPendingMigrations().Any())
+        {
+            Log.Information("Applying pending PostgreSQL migrations...");
             db.Database.Migrate();
-            Log.Information("Migrations applied successfully.");
+            Log.Information("PostgreSQL Migrations applied successfully.");
         }
     }
     catch (Exception ex)
@@ -233,12 +264,10 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 
 // Schedule Recurring Jobs
-if (!string.IsNullOrEmpty(connectionString))
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
-        var config = builder.Configuration.GetSection("BackgroundJobs");
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    var config = builder.Configuration.GetSection("BackgroundJobs");
 
         recurringJobManager.AddOrUpdate<AdMetricsSyncJob>(
             "ad-metrics-sync",
@@ -255,11 +284,10 @@ if (!string.IsNullOrEmpty(connectionString))
             job => job.CheckOverdueInvoicesJob(),
             config["OverdueInvoiceCheckInterval"] ?? Cron.Daily());
 
-        recurringJobManager.AddOrUpdate<AutomationJobs>(
-            "monthly-billing",
-            job => job.MonthlyBillingJob(),
-            config["MonthlyBillingInterval"] ?? Cron.Monthly(1));
-    }
+    recurringJobManager.AddOrUpdate<AutomationJobs>(
+        "monthly-billing",
+        job => job.MonthlyBillingJob(),
+        config["MonthlyBillingInterval"] ?? Cron.Monthly(1));
 }
 
 app.MapGet("/", () => Results.Ok(new 
@@ -288,6 +316,7 @@ app.MapGet("/api/health/db", async (AppDbContext db) => {
         return Results.Ok(new { 
             status = "healthy", 
             database = canConnect ? "connected" : "disconnected",
+            provider = useSqlite ? "SQLite" : "PostgreSQL",
             environment = isUsingRailway ? "Railway" : "Local",
             appliedMigrations = appliedMigrations,
             pendingMigrations = pendingMigrations,
@@ -302,7 +331,7 @@ app.MapGet("/api/health/db", async (AppDbContext db) => {
             statusCode: 500
         );
     }
-});
+}).RequireAuthorization(p => p.RequireRole("Admin"));
 
 app.Run();
 

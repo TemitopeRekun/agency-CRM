@@ -20,79 +20,9 @@ using System.Net.Http.Headers;
 
 namespace Crm.IntegrationTests;
 
-public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public class ClientIntegrationTests : BaseIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly WebApplicationFactory<Program> _factory;
-    private Respawner? _respawner;
-    private static bool _dbInitialized = false;
-    private static readonly object _dbLock = new();
-
-    public IntegrationTests(WebApplicationFactory<Program> factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-    public async Task InitializeAsync()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
-        // Ensure database is created and migrated once per process
-        lock (_dbLock)
-        {
-            if (!_dbInitialized)
-            {
-                context.Database.Migrate();
-                _dbInitialized = true;
-            }
-        }
-
-        // Always Seed CRM Data before each test (DbInitializer handles idempotency)
-        await DbInitializer.SeedAsync(_factory.Services);
-
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
-        {
-            DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = new[] { "public" },
-            // Ignore Tenants and Users (seeded) AND Hangfire internal tables
-            TablesToIgnore = new Table[] 
-            { 
-                "Tenants", 
-                "Users",
-                "__EFMigrationsHistory",
-                new Table("public", "Job"),
-                new Table("public", "JobParameter"),
-                new Table("public", "JobQueue"),
-                new Table("public", "List"),
-                new Table("public", "Schema"),
-                new Table("public", "Server"),
-                new Table("public", "Set"),
-                new Table("public", "State"),
-                new Table("public", "Counter"),
-                new Table("public", "Hash"),
-                new Table("public", "AggregatedCounter")
-            }
-        });
-
-        if (connection != null)
-        {
-            await _respawner.ResetAsync(connection);
-        }
-    }
-
-    public Task DisposeAsync() => Task.CompletedTask;
-
-    private async Task AuthenticateAsync(string email = "admin@tenanta.com", string password = "Admin123!")
-    {
-        var response = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = password });
-        await CheckSuccessAsync(response);
-        var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result!.AccessToken);
-    }
+    public ClientIntegrationTests(CrmWebApplicationFactory factory) : base(factory) { }
 
     private async Task CheckSuccessAsync(HttpResponseMessage response)
     {

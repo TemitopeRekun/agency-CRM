@@ -1,5 +1,6 @@
 using Crm.Application.DTOs.Auth;
 using Crm.Application.Services;
+using Crm.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -12,12 +13,14 @@ public class AuthController : ControllerBase
     private readonly AuthService _authService;
     private readonly ILogger<AuthController> _logger;
     private readonly IWebHostEnvironment _env;
+    private readonly ICurrentUserContext _userContext;
 
-    public AuthController(AuthService authService, ILogger<AuthController> logger, IWebHostEnvironment env)
+    public AuthController(AuthService authService, ILogger<AuthController> logger, IWebHostEnvironment env, ICurrentUserContext userContext)
     {
         _authService = authService;
         _logger = logger;
         _env = env;
+        _userContext = userContext;
     }
 
     [AllowAnonymous]
@@ -72,6 +75,19 @@ public class AuthController : ControllerBase
         Response.Cookies.Delete("refresh_token");
 
         return Ok(new { Message = "Logged out successfully." });
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMe()
+    {
+        var userId = _userContext.UserId;
+        if (!userId.HasValue) return Unauthorized();
+
+        var response = await _authService.GetMeAsync(userId.Value);
+        if (response == null) return Unauthorized();
+
+        return Ok(response);
     }
 
     private void SetTokenCookie(string name, string token)

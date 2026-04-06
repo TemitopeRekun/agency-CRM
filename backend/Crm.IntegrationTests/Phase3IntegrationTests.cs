@@ -19,46 +19,9 @@ using System.Net.Http.Headers;
 
 namespace Crm.IntegrationTests;
 
-public class Phase3IntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public class Phase3IntegrationTests : BaseIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly WebApplicationFactory<Program> _factory;
-    private Respawner? _respawner;
-
-    public Phase3IntegrationTests(WebApplicationFactory<Program> factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public async Task InitializeAsync()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
-        {
-            DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = new[] { "public" },
-            TablesToIgnore = new Table[] { "Tenants", "Users", "__EFMigrationsHistory" }
-        });
-
-        await _respawner.ResetAsync(connection);
-
-        // Ensure database is seeded for each test
-        await DbInitializer.SeedAsync(_factory.Services);
-    }
-
-    public Task DisposeAsync() => Task.CompletedTask;
-
-    private async Task AuthenticateAsync()
-    {
-        var response = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = "admin@tenanta.com", Password = "Admin123!" });
-        var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result!.AccessToken);
-    }
+    public Phase3IntegrationTests(CrmWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task Portal_Signature_Flow_Activates_Project()

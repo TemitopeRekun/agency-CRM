@@ -21,6 +21,21 @@ public class AuthService
         _configuration = configuration;
     }
 
+    public async Task<AuthResponse?> GetMeAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) return null;
+
+        return new AuthResponse
+        {
+            Id = user.Id,
+            Email = user.Email,
+            FullName = user.FullName,
+            Role = user.Role.ToString(),
+            TenantId = user.TenantId
+        };
+    }
+
     public async Task<(AuthResponse? Response, string? AccessToken, string? RefreshToken)> LoginAsync(LoginRequest request, string ipAddress)
     {
         var user = await _userRepository.GetByEmailAsync(request.Email);
@@ -98,10 +113,10 @@ public class AuthService
 
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("sub", user.Id.ToString()),
+            new Claim("email", user.Email),
             new Claim("tenant_id", user.TenantId.ToString()),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new Claim("role", user.Role.ToString())
         };
 
         var token = new JwtSecurityToken(

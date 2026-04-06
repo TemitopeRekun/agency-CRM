@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 export enum InvoiceStatus {
   Draft,
   Sent,
+  PartiallyPaid,
   Paid,
   Overdue,
   Cancelled
@@ -17,16 +18,28 @@ export interface InvoiceItem {
   amount: number;
 }
 
+export interface Payment {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  method: number;
+  referenceNumber: string;
+  notes: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
   totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
   currency: string;
   status: InvoiceStatus;
   dueDate: string;
   projectId: string;
   createdAt: string;
   items: InvoiceItem[];
+  payments: Payment[];
 }
 
 export const useInvoices = () => {
@@ -35,6 +48,14 @@ export const useInvoices = () => {
   const invoicesQuery = useQuery({
     queryKey: ['invoices'],
     queryFn: () => api.get<Invoice[]>('/api/invoices'),
+  });
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { amount: number; paymentDate: string; method: number; referenceNumber?: string; notes?: string } }) =>
+      api.post<Invoice>(`/api/invoices/${id}/payments`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
   });
 
   const generateFromContractMutation = useMutation({
@@ -73,6 +94,8 @@ export const useInvoices = () => {
     invoices: invoicesQuery.data ?? [],
     isLoading: invoicesQuery.isLoading,
     error: invoicesQuery.error,
+    recordPayment: recordPaymentMutation.mutateAsync,
+    isRecordingPayment: recordPaymentMutation.isPending,
     generateFromContract: generateFromContractMutation.mutateAsync,
     isGeneratingFromContract: generateFromContractMutation.isPending,
     generateFromProject: generateFromProjectMutation.mutateAsync,

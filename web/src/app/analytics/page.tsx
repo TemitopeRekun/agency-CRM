@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
                 <div className="space-y-4">
                     <p className="text-slate-300 text-sm leading-relaxed">
                         Based on current trends, your average agency ROAS is <span className="text-emerald-400 font-bold">{analytics?.roas.toFixed(2)}x</span>. 
-                        We recommend increasing budget for projects with ROAS > 4.0 to maximize total revenue share.
+                        We recommend increasing budget for projects with ROAS &gt; 4.0 to maximize total revenue share.
                     </p>
                     <div className="p-4 bg-white/5 rounded-lg border border-white/10">
                         <p className="text-xs font-bold text-slate-500 uppercase">Top Performer</p>

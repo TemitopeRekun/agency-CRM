@@ -8,6 +8,12 @@ export enum OfferStatus {
   Rejected = 3
 }
 
+export interface OfferItem {
+  title: string;
+  description: string;
+  amount: number;
+}
+
 export interface Offer {
   id: string;
   title: string;
@@ -15,6 +21,7 @@ export interface Offer {
   status: OfferStatus;
   notes: string;
   leadId: string;
+  items: OfferItem[];
   quoteTemplateId?: string;
   quoteOpenedAt?: string;
   hasBeenViewed?: boolean;

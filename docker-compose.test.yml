@@ -1,0 +1,42 @@
+services:
+  db-test:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agency_crm_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5434:5432"
+
+  api-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__Default=Host=db-test;Database=agency_crm_test;Username=postgres;Password=postgres
+      - Jwt__Key=super_secret_long_key_for_agency_crm_mvp_development_123!
+      - Jwt__Issuer=agency_crm
+      - Jwt__Audience=agency_crm
+      - ASPNETCORE_ENVIRONMENT=Test
+    depends_on:
+      db-test:
+        condition: service_healthy
+    entrypoint: ["dotnet", "test", "AgencyCrm.sln", "--verbosity", "normal", "/p:CollectCoverage=true", "/p:CoverletOutputFormat=opencover"]
+
+  web-test:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://api-test:8000
+    depends_on:
+      - api-test
+    entrypoint: ["npm", "run", "test"]
+
+volumes:
+  test_data:

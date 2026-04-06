@@ -6,7 +6,8 @@ public enum ContractStatus
     Sent,
     Signed,
     Completed,
-    Cancelled
+    Cancelled,
+    Archived
 }
 
 public enum SuccessFeeType

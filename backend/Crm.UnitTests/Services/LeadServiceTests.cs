@@ -4,17 +4,23 @@ using Crm.Application.Interfaces;
 using Crm.Domain.Entities;
 using Crm.Application.DTOs.Leads;
 using Xunit;
+using AutoFixture;
+using FluentAssertions;
 
 namespace Crm.UnitTests.Services;
 
 public class LeadServiceTests
 {
     private readonly Mock<IGenericRepository<Lead>> _repositoryMock;
+    private readonly Fixture _fixture;
     private readonly LeadService _service;
 
     public LeadServiceTests()
     {
         _repositoryMock = new Mock<IGenericRepository<Lead>>();
+        _fixture = new Fixture();
+        _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
+
         _service = new LeadService(_repositoryMock.Object);
     }
 
@@ -22,18 +28,14 @@ public class LeadServiceTests
     public async Task CreateAsync_ShouldCreateLeadAndSave()
     {
         // Arrange
-        var request = new CreateLeadRequest
-        {
-            Title = "Test Lead",
-            Description = "Test Description"
-        };
+        var request = _fixture.Create<CreateLeadRequest>();
 
         // Act
         var result = await _service.CreateAsync(request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(request.Title, result.Title);
+        result.Should().NotBeNull();
+        result.Title.Should().Be(request.Title);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<Lead>()), Times.Once);
         _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
@@ -42,20 +44,16 @@ public class LeadServiceTests
     public async Task GetAllAsync_ShouldReturnLeads()
     {
         // Arrange
-        var leads = new List<Lead>
-        {
-            new Lead { Id = Guid.NewGuid(), Title = "Lead 1" },
-            new Lead { Id = Guid.NewGuid(), Title = "Lead 2" }
-        };
+        var leads = _fixture.CreateMany<Lead>(2).ToList();
         _repositoryMock.Setup(r => r.GetAllAsync()).ReturnsAsync(leads);
 
         // Act
         var result = await _service.GetAllAsync();
 
         // Assert
-        Assert.Equal(2, result.Count());
-        Assert.Contains(result, l => l.Title == "Lead 1");
-        Assert.Contains(result, l => l.Title == "Lead 2");
+        result.Should().HaveCount(2);
+        result.Should().Contain(l => l.Title == leads[0].Title);
+        result.Should().Contain(l => l.Title == leads[1].Title);
     }
 
     [Fact]
@@ -63,7 +61,7 @@ public class LeadServiceTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var lead = new Lead { Id = id, Title = "Test", Status = LeadStatus.New };
+        var lead = _fixture.Build<Lead>().With(l => l.Id, id).With(l => l.Status, LeadStatus.New).Create();
         _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(lead);
 
         var request = new UpdateLeadStatusRequest { Status = LeadStatus.Qualified };
@@ -72,9 +70,23 @@ public class LeadServiceTests
         var result = await _service.UpdateStatusAsync(id, request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(LeadStatus.Qualified, result.Status);
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(LeadStatus.Qualified);
         _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Lead>()), Times.Once);
         _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_WhenLeadNotFound_ShouldReturnNull()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((Lead?)null);
+
+        // Act
+        var result = await _service.UpdateStatusAsync(id, _fixture.Create<UpdateLeadStatusRequest>());
+
+        // Assert
+        result.Should().BeNull();
     }
 }

@@ -1,10 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+export enum PriorityTier {
+  Tier1 = 0,
+  Tier2 = 1,
+  Tier3 = 2
+}
+
 export interface Client {
   id: string;
   name: string;
-  email: string;
+  legalName: string;
+  vatNumber: string;
+  businessAddress: string;
+  industry: string;
+  priority: PriorityTier;
   createdAt: string;
 }
 
@@ -17,7 +27,7 @@ export const useClients = () => {
   });
 
   const createClientMutation = useMutation({
-    mutationFn: (newClient: { name: string; email: string }) =>
+    mutationFn: (newClient: Partial<Client>) =>
       api.post<Client>('/api/clients', newClient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });

@@ -4,9 +4,10 @@ using Crm.Application.Interfaces;
 
 namespace Crm.Infrastructure.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IUnitOfWork
 {
     private readonly ICurrentUserContext _userContext;
+    private Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? _currentTransaction;
 
     public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext userContext)
         : base(options)
@@ -14,16 +15,20 @@ public class AppDbContext : DbContext
         _userContext = userContext;
     }
 
+    public Guid? CurrentTenantId => _userContext.TenantId;
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<Offer> Offers => Set<Offer>();
+    public DbSet<OfferItem> OfferItems => Set<OfferItem>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<CrmTask> Tasks => Set<CrmTask>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<AdMetric> AdMetrics => Set<AdMetric>();
@@ -122,9 +127,51 @@ public class AppDbContext : DbContext
 
     private void ApplyTenantFilter<T>(ModelBuilder modelBuilder) where T : class, ITenantedEntity
     {
-        modelBuilder.Entity<T>().HasQueryFilter(e => 
-            !_userContext.IsAuthenticated || 
-            (_userContext.TenantId.HasValue && e.TenantId == _userContext.TenantId.Value));
+        modelBuilder.Entity<T>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+    }
+
+    public async Task BeginTransactionAsync()
+    {
+        if (_currentTransaction != null) return;
+        _currentTransaction = await Database.BeginTransactionAsync();
+    }
+
+    public async Task CommitAsync()
+    {
+        try
+        {
+            await SaveChangesAsync();
+            if (_currentTransaction != null) await _currentTransaction.CommitAsync();
+        }
+        catch
+        {
+            await RollbackAsync();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction != null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task RollbackAsync()
+    {
+        try
+        {
+            if (_currentTransaction != null) await _currentTransaction.RollbackAsync();
+        }
+        finally
+        {
+            if (_currentTransaction != null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

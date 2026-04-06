@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /source
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+# Using a shell script as entrypoint to allow flexible arguments
+RUN echo '#!/bin/bash\ndotnet-ef "$@"' > /usr/local/bin/ef-helper && chmod +x /usr/local/bin/ef-helper
+ENTRYPOINT ["ef-helper"]

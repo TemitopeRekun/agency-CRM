@@ -115,6 +115,9 @@ public class ContractService
             SuccessFeeType = c.SuccessFeeType,
             SuccessFeeValue = c.SuccessFeeValue,
             LastInvoicedAt = c.LastInvoicedAt,
+            HasBeenViewed = c.HasBeenViewed,
+            ViewedAt = c.ViewedAt,
+            Token = c.PortalToken,
             CreatedAt = c.CreatedAt
         };
     }

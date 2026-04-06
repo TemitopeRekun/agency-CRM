@@ -46,7 +46,9 @@ public class ContractsController : ControllerBase
             return BadRequest("A digital signature is required.");
         }
 
-        var response = await _contractService.SignContractAsync(id, request.DigitalSignature);
+        var signerIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+        var response = await _contractService.SignContractAsync(id, request.DigitalSignature, signerIp);
         if (response == null) return NotFound();
 
         return Ok(response);

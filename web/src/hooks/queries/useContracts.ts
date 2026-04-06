@@ -6,7 +6,8 @@ export enum ContractStatus {
   Sent,
   Signed,
   Completed,
-  Cancelled
+  Cancelled,
+  Archived
 }
 
 export enum SuccessFeeType {
@@ -64,6 +65,14 @@ export const useContracts = () => {
     },
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ContractStatus }) =>
+      api.put<Contract>(`/api/contracts/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+
   return {
     contracts: contractsQuery.data ?? [],
     isLoading: contractsQuery.isLoading,
@@ -74,5 +83,7 @@ export const useContracts = () => {
     isGenerating: generateContractMutation.isPending,
     signContract: signContractMutation.mutateAsync,
     isSigning: signContractMutation.isPending,
+    updateStatus: updateStatusMutation.mutateAsync,
+    isUpdatingStatus: updateStatusMutation.isPending,
   };
 };

@@ -20,7 +20,7 @@ public class CurrentUserContext : ICurrentUserContext
     {
         get
         {
-            var value = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var value = _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
             return Guid.TryParse(value, out var id) ? id : null;
         }
     }
@@ -35,7 +35,7 @@ public class CurrentUserContext : ICurrentUserContext
         }
     }
 
-    public string? Role => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
+    public string? Role => _httpContextAccessor.HttpContext?.User?.FindFirst("role")?.Value;
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 }

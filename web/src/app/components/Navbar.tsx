@@ -1,21 +1,57 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const NAV_ITEMS = [
+  { label: 'Clients', href: '/clients', color: 'hover:text-blue-400' },
+  { label: 'Leads', href: '/leads', color: 'hover:text-green-400' },
+  { label: 'Offers', href: '/offers', color: 'hover:text-purple-400' },
+  { label: 'Projects', href: '/projects', color: 'hover:text-amber-400' },
+  { label: 'Tasks', href: '/tasks', color: 'hover:text-emerald-400' },
+  { label: 'Contracts', href: '/contracts', color: 'hover:text-pink-400' },
+  { label: 'Invoices', href: '/invoices', color: 'hover:text-rose-400' },
+  { label: 'Settings', href: '/settings', color: 'hover:text-slate-400' },
+];
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
-    <nav className="bg-slate-900 text-white p-4 shadow-md">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link href="/dashboard" className="text-xl font-bold">Agency CRM</Link>
-        <div className="space-x-6">
-          <Link href="/clients" className="hover:text-blue-400 transition">Clients</Link>
-          <Link href="/leads" className="hover:text-green-400 transition">Leads</Link>
-          <Link href="/offers" className="hover:text-purple-400 transition">Offers</Link>
-          <Link href="/projects" className="hover:text-amber-400 transition">Projects</Link>
-          <Link href="/tasks" className="hover:text-emerald-400 transition">Tasks</Link>
-          <Link href="/contracts" className="hover:text-pink-400 transition">Contracts</Link>
-          <Link href="/invoices" className="hover:text-rose-400 transition">Invoices</Link>
-          <Link href="/analytics" className="hover:text-rose-400 transition">Analytics</Link>
-          <Link href="/integrations" className="hover:text-cyan-400 font-bold transition">Integrations</Link>
-          <Link href="/login" className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition">Logout</Link>
+    <nav className="sticky top-0 z-50 w-full border-b bg-slate-950/80 backdrop-blur-md text-white shadow-lg">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-8">
+            <Link href="/dashboard" className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg shadow-inner">A</div>
+                <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                    Agency CRM
+                </span>
+            </Link>
+            
+            <div className="hidden lg:flex items-center gap-1">
+                {NAV_ITEMS.map((item) => (
+                    <Link 
+                        key={item.href}
+                        href={item.href} 
+                        className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-md
+                            ${pathname === item.href 
+                                ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/20' 
+                                : `text-slate-400 ${item.color} hover:bg-white/5`
+                            }`}
+                    >
+                        {item.label}
+                    </Link>
+                ))}
+            </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/login" 
+            className="text-sm font-semibold bg-rose-600/90 hover:bg-rose-600 px-4 py-2 rounded-lg transition-all shadow-md active:scale-95"
+          >
+            Logout
+          </Link>
         </div>
       </div>
     </nav>

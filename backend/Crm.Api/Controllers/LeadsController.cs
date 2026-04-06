@@ -44,4 +44,13 @@ public class LeadsController : ControllerBase
         if (response == null) return NotFound();
         return Ok(response);
     }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<LeadResponse>> UpdateLead(Guid id, UpdateLeadRequest request)
+    {
+        _logger.LogInformation("Updating lead: {Id}", id);
+        var response = await _leadService.UpdateAsync(id, request);
+        if (response == null) return NotFound();
+        return Ok(response);
+    }
 }

@@ -11,12 +11,12 @@ using Microsoft.Net.Http.Headers;
 
 namespace Crm.IntegrationTests;
 
-public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public class AuthIntegrationTests : IClassFixture<CrmWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CrmWebApplicationFactory _factory;
 
-    public AuthIntegrationTests(WebApplicationFactory<Program> factory)
+    public AuthIntegrationTests(CrmWebApplicationFactory factory)
     {
         _factory = factory;
         // Create client with cookie support

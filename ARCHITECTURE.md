@@ -2,7 +2,7 @@
 
 ## Tech Stack
 - **Backend:** .NET 8 ASP.NET Core Web API
-- **Data Access:** Entity Framework Core + Npgsql (PostgreSQL)
+- **Data Access:** Entity Framework Core + Npgsql (Postgres/Production) OR SQLite (Local)
 - **Frontend:** Next.js (App Router, TypeScript, Tailwind CSS)
 - **Orchestration:** Docker + docker-compose
 
@@ -21,7 +21,7 @@
 2. **API Layer:** RESTful Controllers handle requests and DTO mapping.
 3. **Application Layer:** Services contain business logic, validation, and orchestration.
 4. **Infrastructure Layer:** Repositories handle data access and EF Core `DbContext` interactions.
-5. **Persistence:** PostgreSQL for relational data, scoped by `TenantId`.
+5. **Persistence:** PostgreSQL for Production/CI, SQLite for Local development, scoped by `TenantId`.
 
 ## Frontend Data Access
 The Next.js application uses a standardized data access layer:
@@ -38,7 +38,7 @@ The Next.js application uses a standardized data access layer:
 
 ## Background Jobs
 The system uses **Hangfire** for durable background processing:
-- **Persistence**: Job state is stored in PostgreSQL.
+- **Persistence**: PostgreSQL (Production) or In-Memory (Local).
 - **Server**: An `IHostedService` Hangfire server runs within the API process.
 - **Jobs**:
   - `AdMetricsSyncJob`: Recurring sync of marketing metrics.

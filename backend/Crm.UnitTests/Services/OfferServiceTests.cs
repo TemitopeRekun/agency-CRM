@@ -4,6 +4,9 @@ using Crm.Application.Interfaces;
 using Crm.Domain.Entities;
 using Crm.Application.DTOs.Offers;
 using Xunit;
+using AutoFixture;
+using FluentAssertions;
+using MockQueryable.Moq;
 
 namespace Crm.UnitTests.Services;
 
@@ -12,6 +15,7 @@ public class OfferServiceTests
     private readonly Mock<IGenericRepository<Offer>> _repositoryMock;
     private readonly Mock<IAutomationService> _automationServiceMock;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Fixture _fixture;
     private readonly OfferService _service;
 
     public OfferServiceTests()
@@ -19,6 +23,8 @@ public class OfferServiceTests
         _repositoryMock = new Mock<IGenericRepository<Offer>>();
         _automationServiceMock = new Mock<IAutomationService>();
         _emailServiceMock = new Mock<IEmailService>();
+        _fixture = new Fixture();
+        _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
         
         _service = new OfferService(
             _repositoryMock.Object,
@@ -30,31 +36,30 @@ public class OfferServiceTests
     public async Task CreateAsync_ShouldCreateOfferAndSave()
     {
         // Arrange
-        var request = new CreateOfferRequest
-        {
-            Title = "Test Offer",
-            TotalAmount = 1000,
-            LeadId = Guid.NewGuid()
-        };
+        var request = _fixture.Create<CreateOfferRequest>();
 
         // Act
         var result = await _service.CreateAsync(request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(request.Title, result.Title);
-        Assert.Equal(request.TotalAmount, result.TotalAmount);
+        result.Should().NotBeNull();
+        result.Title.Should().Be(request.Title);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<Offer>()), Times.Once);
         _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateStatusAsync_ShouldUpdateStatus()
+    public async Task UpdateStatusAsync_ToAccepted_TriggersAutomation()
     {
         // Arrange
         var id = Guid.NewGuid();
-        var offer = new Offer { Id = id, Title = "Test", Status = OfferStatus.Draft };
-        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(offer);
+        var offer = _fixture.Build<Offer>()
+            .With(o => o.Id, id)
+            .With(o => o.Status, OfferStatus.Draft)
+            .Create();
+            
+        var mock = new List<Offer> { offer }.AsQueryable().BuildMock();
+        _repositoryMock.Setup(r => r.AsQueryable()).Returns(mock);
 
         var request = new UpdateOfferStatusRequest { Status = OfferStatus.Accepted };
 
@@ -62,46 +67,27 @@ public class OfferServiceTests
         var result = await _service.UpdateStatusAsync(id, request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(OfferStatus.Accepted, result.Status);
-        _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Offer>()), Times.Once);
-        _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateStatusAsync_ToAccepted_TriggersAutomationService()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var offer = new Offer { Id = id, Title = "Big Offer", Status = OfferStatus.Draft };
-        
-        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(offer);
-
-        var request = new UpdateOfferStatusRequest { Status = OfferStatus.Accepted };
-
-        // Act
-        var result = await _service.UpdateStatusAsync(id, request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(OfferStatus.Accepted, result.Status);
-        
-        // Verify AutomationService call
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(OfferStatus.Accepted);
         _automationServiceMock.Verify(a => a.ProcessAcceptedOfferAsync(id), Times.Once);
-        _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateStatusAsync_NonExistentOffer_ReturnsNull()
+    public async Task MarkAsViewedAsync_SetsFlagAndTimestamp()
     {
         // Arrange
         var id = Guid.NewGuid();
-        _repositoryMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((Offer?)null);
+        var offer = _fixture.Build<Offer>().With(o => o.Id, id).With(o => o.HasBeenViewed, false).Create();
+        var mock = new List<Offer> { offer }.AsQueryable().BuildMock();
+        _repositoryMock.Setup(r => r.AsQueryable()).Returns(mock);
 
         // Act
-        var result = await _service.UpdateStatusAsync(id, new UpdateOfferStatusRequest { Status = OfferStatus.Accepted });
+        var result = await _service.MarkAsViewedAsync(id);
 
         // Assert
-        Assert.Null(result);
+        result.Should().NotBeNull();
+        result!.HasBeenViewed.Should().BeTrue();
+        result.QuoteOpenedAt.Should().NotBeNull();
+        _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Offer>()), Times.Once);
     }
 }

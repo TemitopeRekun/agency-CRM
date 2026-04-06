@@ -10,17 +10,19 @@ using Moq;
 using Crm.Application.Interfaces;
 using Crm.Infrastructure.Data;
 using System.Net.Http.Headers;
+using Microsoft.EntityFrameworkCore;
+using Crm.Application.DTOs.Projects;
 
 namespace Crm.IntegrationTests;
 
-public class AdSyncIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public class AdSyncIntegrationTests : IClassFixture<CrmWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly WebApplicationFactory<Program> _factory;
     private readonly Mock<IAdPlatformClient> _googleMock = new();
     private readonly Mock<IAdPlatformClient> _metaMock = new();
 
-    public AdSyncIntegrationTests(WebApplicationFactory<Program> factory)
+    public AdSyncIntegrationTests(CrmWebApplicationFactory factory)
     {
         _googleMock.Setup(x => x.Platform).Returns(AdPlatform.Google);
         _metaMock.Setup(x => x.Platform).Returns(AdPlatform.Meta);
@@ -61,8 +63,8 @@ public class AdSyncIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         await AuthenticateAsync();
 
         // 1. Setup: Create a Project and an Ad Account
-        var projectResp = await _client.PostAsJsonAsync("/api/projects", new { Name = "Ad Project" });
-        var project = await projectResp.Content.ReadFromJsonAsync<Project>();
+        var projectResp = await _client.PostAsJsonAsync("/api/projects", new CreateProjectRequest { Name = "Ad Project" });
+        var project = await projectResp.Content.ReadFromJsonAsync<ProjectResponse>();
 
         // We'll create the AdAccount directly via DB for simplicity in test setup if no endpoint exists,
         // or use an endpoint if available. Let's assume we use a private setup.
@@ -76,7 +78,7 @@ public class AdSyncIntegrationTests : IClassFixture<WebApplicationFactory<Progra
                 Platform = AdPlatform.Google,
                 ExternalAccountId = "acc_123",
                 IsActive = true,
-                TenantId = project.TenantId
+                TenantId = Guid.Parse("00000000-0000-0000-0000-000000000001")
             });
             await context.SaveChangesAsync();
         }

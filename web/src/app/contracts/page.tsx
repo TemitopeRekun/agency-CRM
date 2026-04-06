@@ -13,11 +13,12 @@ import { Select } from '@/components/ui/Select';
 import { toast } from 'sonner';
 
 export default function ContractsPage() {
-  const { contracts, isLoading, signContract, isSigning, createContract, isCreating } = useContracts();
+  const { contracts, isLoading, signContract, isSigning, createContract, isCreating, updateStatus, isUpdatingStatus } = useContracts();
   const { projects } = useProjects();
   const { generateFromContract, isGeneratingFromContract } = useInvoices();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -65,6 +66,19 @@ export default function ContractsPage() {
     }
   };
 
+  const handleArchiveContract = async (contractId: string) => {
+    setArchivingId(contractId);
+    try {
+      await updateStatus({ id: contractId, status: ContractStatus.Archived });
+      toast.success('Contract archived successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to archive contract');
+    } finally {
+      setArchivingId(null);
+    }
+  };
+
   const handleGenerateInvoice = async (contractId: string) => {
     setGeneratingId(contractId);
     try {
@@ -82,6 +96,18 @@ export default function ContractsPage() {
     const project = projects.find(p => p.id === projectId);
     return project ? project.name : 'Unknown Project';
   };
+
+  const getStatusColor = (status: ContractStatus) => {
+      switch (status) {
+          case ContractStatus.Signed: return 'bg-emerald-100 text-emerald-800';
+          case ContractStatus.Archived: return 'bg-slate-100 text-slate-800 opacity-60';
+          case ContractStatus.Cancelled: return 'bg-rose-100 text-rose-800';
+          default: return 'bg-amber-100 text-amber-800';
+      }
+  };
+
+  // Filter out archived unless we want a toggle later
+  const activeContracts = contracts.filter(c => c.status !== ContractStatus.Archived);
 
   return (
     <Container>
@@ -111,7 +137,7 @@ export default function ContractsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {contracts.map((c) => (
+              {activeContracts.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.title}</TableCell>
                   <TableCell>{getProjectName(c.projectId)}</TableCell>
@@ -130,7 +156,7 @@ export default function ContractsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 w-fit">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium w-fit ${getStatusColor(c.status)}`}>
                         {ContractStatus[c.status]}
                       </span>
                       {c.status === ContractStatus.Signed ? (
@@ -141,7 +167,7 @@ export default function ContractsPage() {
                     </div>
                   </TableCell>
                   <TableCell>{new Date(c.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right flex gap-2 justify-end items-center h-full">
+                  <TableCell className="text-right flex gap-1 justify-end items-center h-full">
                     {c.status !== ContractStatus.Signed && (
                       <Button
                         variant="primary"
@@ -150,7 +176,7 @@ export default function ContractsPage() {
                         isLoading={signingId === c.id}
                         disabled={isSigning}
                       >
-                        Sign (Internal)
+                        Sign
                       </Button>
                     )}
                     <Button
@@ -161,6 +187,16 @@ export default function ContractsPage() {
                       disabled={isGeneratingFromContract}
                     >
                       Invoice
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-400 hover:text-red-600"
+                        onClick={() => handleArchiveContract(c.id)}
+                        isLoading={archivingId === c.id}
+                        disabled={isUpdatingStatus}
+                    >
+                        Archive
                     </Button>
                   </TableCell>
                 </TableRow>

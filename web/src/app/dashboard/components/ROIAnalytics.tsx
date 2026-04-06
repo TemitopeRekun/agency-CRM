@@ -61,7 +61,7 @@ export const ROIAnalytics = ({ projectId }: ROIAnalyticsProps) => {
              ${analytics?.costPerLead.toFixed(2)}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-             Target: <$50.00
+             Target: &lt;$50.00
           </p>
           <div className="h-[60px] mt-4">
              <ResponsiveContainer width="100%" height="100%">

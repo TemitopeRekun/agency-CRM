@@ -22,6 +22,11 @@ public class ClientService
         {
             Id = c.Id,
             Name = c.Name,
+            LegalName = c.LegalName,
+            VatNumber = c.VatNumber,
+            BusinessAddress = c.BusinessAddress,
+            Industry = c.Industry,
+            Priority = c.Priority,
             CreatedAt = c.CreatedAt
         }).ToList();
     }
@@ -32,6 +37,11 @@ public class ClientService
         {
             Id = Guid.NewGuid(),
             Name = request.Name,
+            LegalName = request.LegalName,
+            VatNumber = request.VatNumber,
+            BusinessAddress = request.BusinessAddress,
+            Industry = request.Industry,
+            Priority = request.Priority,
             TenantId = _currentUserContext.TenantId ?? Guid.Empty
         };
 
@@ -42,6 +52,11 @@ public class ClientService
         {
             Id = client.Id,
             Name = client.Name,
+            LegalName = client.LegalName,
+            VatNumber = client.VatNumber,
+            BusinessAddress = client.BusinessAddress,
+            Industry = client.Industry,
+            Priority = client.Priority,
             CreatedAt = client.CreatedAt
         };
     }

@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import Navbar from "./components/Navbar";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 import { AuthProvider } from "@/hooks/useAuth";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -38,7 +39,8 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <Navbar />
-            <main className="flex-1">
+            <main className="flex-1 container mx-auto px-4 py-8">
+              <Breadcrumbs />
               {children}
             </main>
             <ToasterProvider />

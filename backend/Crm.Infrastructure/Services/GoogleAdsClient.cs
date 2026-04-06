@@ -44,12 +44,12 @@ public class GoogleAdsClient : IAdPlatformClient
 
         try 
         {
-            _httpClient.DefaultRequestHeaders.Add("developer-token", developerToken);
-            // OAuth token would be injected by a DelegatingHandler or IdentityService
-            
-            var response = await _httpClient.PostAsJsonAsync(
-                $"https://googleads.googleapis.com/v17/customers/{customerId}/googleAds:search", 
-                new { query });
+            var url = $"https://googleads.googleapis.com/v17/customers/{customerId}/googleAds:search";
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("developer-token", developerToken);
+            request.Content = JsonContent.Create(new { query });
+
+            var response = await _httpClient.SendAsync(request);
                 
             if (!response.IsSuccessStatusCode)
             {

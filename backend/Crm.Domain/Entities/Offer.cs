@@ -21,5 +21,6 @@ public class Offer : BaseEntity, ITenantedEntity
     public DateTimeOffset? QuoteOpenedAt { get; set; }
     public bool HasBeenViewed { get; set; }
     public Guid TenantId { get; set; }
+    public ICollection<OfferItem> Items { get; set; } = new List<OfferItem>();
     public ICollection<Project> Projects { get; set; } = new List<Project>();
 }

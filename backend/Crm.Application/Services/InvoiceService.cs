@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Application.Services;
 
-public class InvoiceService
+public class InvoiceService : IInvoiceService
 {
     private readonly IGenericRepository<Invoice> _repository;
     private readonly IGenericRepository<Contract> _contractRepository;
@@ -26,7 +26,10 @@ public class InvoiceService
 
     public async Task<IEnumerable<InvoiceResponse>> GetAllAsync()
     {
-        var invoices = await _repository.AsQueryable().Include(i => i.Items).ToListAsync();
+        var invoices = await _repository.AsQueryable()
+            .Include(i => i.Items)
+            .Include(i => i.Payments)
+            .ToListAsync();
         return invoices.Select(MapToResponse).ToList();
     }
 
@@ -201,6 +204,46 @@ public class InvoiceService
         return MapToResponse(invoice);
     }
 
+    public async Task<int> ProcessPendingBillingAsync()
+    {
+        var contracts = await _contractRepository.AsQueryable()
+            .Where(c => c.Status == ContractStatus.Signed)
+            .ToListAsync();
+
+        int generatedCount = 0;
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var contract in contracts)
+        {
+            // If never invoiced, check StartDate. If invoiced, check 30 days gap.
+            bool needsInvoicing = false;
+            if (contract.LastInvoicedAt == null)
+            {
+                needsInvoicing = contract.StartDate <= now.DateTime;
+            }
+            else
+            {
+                needsInvoicing = (now - contract.LastInvoicedAt.Value).TotalDays >= 30;
+            }
+
+            if (needsInvoicing)
+            {
+                try 
+                {
+                    await GenerateFromContractAsync(contract.Id);
+                    generatedCount++;
+                }
+                catch (Exception ex)
+                {
+                    // Log error for specific contract but continue with others
+                    Console.WriteLine($"Error billing contract {contract.Id}: {ex.Message}");
+                }
+            }
+        }
+
+        return generatedCount;
+    }
+
     public async Task<InvoiceResponse?> UpdateAsync(Guid id, UpdateInvoiceRequest request)
     {
         var invoice = await _repository.AsQueryable()
@@ -232,6 +275,45 @@ public class InvoiceService
         return MapToResponse(invoice);
     }
 
+    public async Task<InvoiceResponse?> RecordPaymentAsync(Guid invoiceId, RecordPaymentRequest request)
+    {
+        var invoice = await _repository.AsQueryable()
+            .Include(i => i.Payments)
+            .Include(i => i.Items)
+            .FirstOrDefaultAsync(i => i.Id == invoiceId);
+
+        if (invoice == null) return null;
+
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            Amount = request.Amount,
+            PaymentDate = request.PaymentDate,
+            Method = request.Method,
+            ReferenceNumber = request.ReferenceNumber,
+            Notes = request.Notes,
+            InvoiceId = invoiceId,
+            TenantId = invoice.TenantId
+        };
+
+        invoice.Payments.Add(payment);
+        invoice.PaidAmount += request.Amount;
+
+        if (invoice.PaidAmount >= invoice.TotalAmount)
+        {
+            invoice.Status = InvoiceStatus.Paid;
+        }
+        else if (invoice.PaidAmount > 0)
+        {
+            invoice.Status = InvoiceStatus.PartiallyPaid;
+        }
+
+        await _repository.UpdateAsync(invoice);
+        await _repository.SaveChangesAsync();
+
+        return MapToResponse(invoice);
+    }
+
     private InvoiceResponse MapToResponse(Invoice i)
     {
         return new InvoiceResponse
@@ -239,6 +321,8 @@ public class InvoiceService
             Id = i.Id,
             InvoiceNumber = i.InvoiceNumber,
             TotalAmount = i.TotalAmount,
+            PaidAmount = i.PaidAmount,
+            BalanceAmount = i.BalanceAmount,
             Currency = i.Currency,
             Status = i.Status,
             DueDate = i.DueDate,
@@ -251,6 +335,15 @@ public class InvoiceService
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,
                 Amount = item.Amount
+            }).ToList(),
+            Payments = (i.Payments ?? new List<Payment>()).Select(p => new PaymentResponse
+            {
+                Id = p.Id,
+                Amount = p.Amount,
+                PaymentDate = p.PaymentDate,
+                Method = p.Method,
+                ReferenceNumber = p.ReferenceNumber,
+                Notes = p.Notes
             }).ToList()
         };
     }

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Crm.Application.Interfaces;
 using Crm.Domain.Entities;
@@ -24,7 +25,10 @@ public class AdMetricsSyncJob
     {
         _logger.LogInformation("Starting Nightly Ad Metrics Sync Job at {Time}", DateTimeOffset.Now);
         
-        var projects = await _projectRepository.GetAllAsync();
+        // Explicitly ignore tenant filters as this job must process all projects across all tenants
+        var projects = await _projectRepository.AsQueryable()
+            .IgnoreQueryFilters()
+            .ToListAsync();
         int syncCount = 0;
 
         foreach (var project in projects.Where(p => p.Status == ProjectStatus.Active))
