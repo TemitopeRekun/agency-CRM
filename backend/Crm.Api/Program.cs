@@ -40,9 +40,11 @@ else
     Log.Information("🌍 Using PostgreSQL provider (Railway).");
 }
 
-var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
-    ?? builder.Configuration["CORS:AllowedOrigins"])?.Split(',') 
-    ?? new[] { "http://localhost:3000", "https://agency-ccrm.netlify.app" };
+var rawAllowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
+    ?? builder.Configuration["CORS:AllowedOrigins"];
+
+var allowedOrigins = rawAllowedOrigins?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) 
+    ?? new[] { "http://localhost:3000", "https://agency-ccrm.netlify.app", "https://crm.tradocademy.ng" };
 
 // Serilog Configuration
 Log.Logger = new LoggerConfiguration()
@@ -55,6 +57,9 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+Log.Information("🚀 Starting Agency CRM API in {Environment} mode", builder.Environment.EnvironmentName);
+Log.Information("🌐 Allowed CORS Origins: {Origins}", string.Join(", ", allowedOrigins));
 
 builder.Services.AddControllers();
 
@@ -245,8 +250,10 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
     
-    // Allow localhost without port for easier testing
-    var csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://localhost:* ws://localhost:*; frame-ancestors 'none';";
+    // Allow localhost, production frontend, and tracking academy domain
+    var csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; " +
+              "connect-src 'self' http://localhost:* ws://localhost:* https://agency-ccrm.netlify.app https://crm.tradocademy.ng; " +
+              "frame-ancestors 'none';";
     context.Response.Headers.Append("Content-Security-Policy", csp);
     await next();
 });
