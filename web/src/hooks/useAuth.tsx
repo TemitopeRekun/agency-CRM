@@ -46,13 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await api.post<User>('/api/auth/login', { email, password });
+    const data = await api.post<any>('/api/auth/login', { email, password });
+    
+    // Fallback for cross-domain cookie blocking
+    if (data.accessToken) {
+      localStorage.setItem('access_token', data.accessToken);
+    }
+    
     setUser(data);
-    // Force a small delay to ensure state propagates
-    setTimeout(() => {
-      router.push('/dashboard');
-      router.refresh(); 
-    }, 100);
+    window.location.href = '/dashboard';
   };
 
   const register = async (email: string, password: string, fullName: string, agencyName: string) => {
@@ -65,12 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post('/api/auth/logout', {});
     } catch {
-      // Still clear local state even if the server call fails
+      // Still clear local state
     } finally {
+      localStorage.removeItem('access_token');
       setUser(null);
-      // Clear all React Query cached data to prevent stale data leaking between sessions
       queryClient.clear();
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
 

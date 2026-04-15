@@ -26,7 +26,10 @@ export async function apiRequest<T>(
 
   const fetchOptions: RequestInit = {
     ...options,
-    headers,
+    headers: {
+      ...headers,
+      'Authorization': typeof window !== 'undefined' ? `Bearer ${localStorage.getItem('access_token')}` : '',
+    },
     credentials: 'include',
   };
 
