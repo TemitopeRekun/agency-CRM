@@ -42,7 +42,7 @@ else
 
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
     ?? builder.Configuration["CORS:AllowedOrigins"])?.Split(',') 
-    ?? new[] { "http://localhost:3000" };
+    ?? new[] { "http://localhost:3000", "https://agency-ccrm.netlify.app" };
 
 // Serilog Configuration
 Log.Logger = new LoggerConfiguration()
