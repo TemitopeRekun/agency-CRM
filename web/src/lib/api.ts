@@ -99,8 +99,18 @@ export async function apiRequest<T>(
       signals.emit('500', 'A server error occurred.');
     }
 
-    // Dynamic import avoids SSR issues with Sonner
-    if (response.status >= 400 && response.status < 500 && response.status !== 401 && response.status !== 403) {
+    // Show a toast only for actionable client errors (e.g. 400 Bad Request,
+    // 409 Conflict, 422 Unprocessable). Skip 401/403 (handled by signals),
+    // and 404 (handled by each component's own empty/error state — no toast
+    // needed, the resource simply doesn't exist).
+    const shouldToast =
+      response.status >= 400 &&
+      response.status < 500 &&
+      response.status !== 401 &&
+      response.status !== 403 &&
+      response.status !== 404;
+
+    if (shouldToast) {
       const { toast } = await import('sonner');
       toast.error(message);
     }
